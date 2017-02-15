@@ -227,7 +227,7 @@
             var texture = new THREE.Texture();
             var loader = new Potree.PanoSphereImageLoader();
             loader.load(rootURL + id,function(image){
-                var loaded = this.loaded;
+                var loaded = loader.loaded;
                 var rx = image.rx;
                 if(loaded == 2 && rx == 0)
                     return;
