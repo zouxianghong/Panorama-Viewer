@@ -23,14 +23,12 @@
     Potree.PanoSphereImageLoader = function ( manager ) {
 
         this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
-
+        this.loaded = 0;
     };
 
     Potree.PanoSphereImageLoader.prototype = {
 
         constructor: Potree.PanoSphereImageLoader,
-        loaded:0,
-
         load: function ( url, onLoad, onProgress, onError ) {
 
             var scope = this;
