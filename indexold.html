@@ -1,0 +1,136 @@
+<html>
+<head>
+    <style>
+        body{
+            margin: 0;
+        }
+        canvas{
+            width: 100%;
+            height: 100%
+        }
+    </style>
+    <script src="js\three.js"></script>
+    <script src="js\OrbitControls.js"></script>
+    <script src="js\dat.gui.min.js"></script>
+
+</head>
+<body>
+<script>
+    // panoramas background
+    var panoramaPath = "PanoramaData/testpano.jpg";
+
+    // setting up the renderer
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // creating a new scene
+    var scene = new THREE.Scene();
+
+    // adding a camera
+    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+    camera.position.set( 0, 0, 0.1 );
+    camera.target = new THREE.Vector3(0, 0, 0);
+
+    //control
+    controls = new THREE.OrbitControls( camera );
+    controls.enablePan = false;
+    controls.minDistance = 10;
+    //controls.maxDistance = 80;
+
+    // creation of a big sphere geometry
+    var sphere = new THREE.SphereGeometry(40, 200, 200);  //widthSegments >= 8 , heightSegments >= 4
+    sphere.applyMatrix(new THREE.Matrix4().makeScale(-1, 1, 1));
+
+    // creation of the sphere material
+    var sphereMaterial = new THREE.MeshBasicMaterial();
+    sphereMaterial.map = THREE.ImageUtils.loadTexture(panoramaPath);
+
+    // geometry + material = mesh (actual object)
+    var sphereMesh = new THREE.Mesh(sphere, sphereMaterial);
+    scene.add(sphereMesh);
+    
+    var axisHelper = new THREE.AxisHelper( 50 );
+		scene.add( axisHelper );
+		
+		window.addEventListener( 'resize', onWindowResize, false );
+		document.addEventListener( 'mousedown', MouseDown, false );
+
+    render();
+
+    function render(){
+
+        requestAnimationFrame(render);
+        // moving the camera according to current latitude (vertical movement) and longitude (horizontal movement)
+        camera.lookAt(camera.target);
+        controls.update();
+        // calling again render function
+        renderer.render(scene, camera);
+
+        var a = sphereMaterial.map.toJSON;
+    }
+    
+    function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+    
+    function MouseDown(event){
+    	
+    		event.preventDefault();
+    		var mouse =  {
+							x: event.clientX,
+							y: - event.clientY
+						};
+				var vector = new THREE.Vector3(mouse.x,mouse.y,0);
+				vector.unproject(camera);
+				var ray = new THREE.Ray(camera.position,vector.sub(camera.position).normalize());
+				var p = pickBallVertex(ray);
+				var uv = p.uv;
+				console.log('pointer: (' + uv.x + ',' + uv.y + ')');
+    }
+    
+    pickBallVertex = function(ray){
+    	
+			  var _ray = ray !== undefined ?ray : new THREE.Ray();
+			  sphereMesh.updateMatrixWorld();
+			  var object = sphere;
+			  var vertices = object.vertices;
+			  var faces = object.faces;
+			  var	closestPoint = {
+				position: vertices[0].clone().applyMatrix4(sphereMesh.matrixWorld),
+				uv:new THREE.Vector2()
+			  };
+			  var min_distance = _ray.distanceToPoint(vertices[0].clone().applyMatrix4(sphereMesh.matrixWorld));
+			  for(var i in vertices){
+				var v = vertices[i].clone().applyMatrix4(sphereMesh.matrixWorld);
+			      var distance = _ray.distanceToPoint(v);
+			      if(distance < min_distance){
+			          min_distance = distance;
+			          closestPoint.position = v;
+			      }
+			  }
+				var faceId;
+				for(var i in faces){
+					var a = vertices[faces[i].a].clone().applyMatrix4(sphereMesh.matrixWorld),
+						b = vertices[faces[i].b].clone().applyMatrix4(sphereMesh.matrixWorld),
+						c = vertices[faces[i].c].clone().applyMatrix4(sphereMesh.matrixWorld);
+					if(_ray.intersectTriangle(a,b,c))
+						faceId = i;
+				}
+				if(faceId !== undefined){
+					var uvs = object.faceVertexUvs[0][faceId];
+					closestPoint.uv = new THREE.Vector2((uvs[0].x+uvs[1].x+uvs[2].x)/3,(uvs[0].y+uvs[1].y+uvs[2].y)/3);
+				
+				}
+				closestPoint.position.copy(scene.worldToLocal(closestPoint.position));
+			  return closestPoint;
+			  
+		};
+
+</script>
+</body>
+</html>

@@ -16,8 +16,258 @@
 </head>
 <body>
 <script>
+    function Potree(){
+
+    }
+
+    Potree.PanoSphereImageLoader = function ( manager ) {
+
+        this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
+
+    };
+
+    Potree.PanoSphereImageLoader.prototype = {
+
+        constructor: Potree.PanoSphereImageLoader,
+
+        load: function ( url, onLoad, onProgress, onError ) {
+
+            var scope = this;
+            var loadsrc_r0 = url + '_r0.jpg';
+            var loadsrc_r1 = url + '_r1.jpg';
+
+            var cached = THREE.Cache.get( loadsrc_r0 );
+            var cached_r1 = THREE.Cache.get( loadsrc_r1 );
+
+            if ( cached_r1 !== undefined ) {
+
+                onLoad( cached_r1 );
+                return;
+
+            }
+            if ( cached !== undefined ) {
+
+                onLoad( cached );
+                return;
+
+            }
+
+            var image = document.createElement( 'img' );
+            var image_r1 = document.createElement( 'img' );
+
+            image.addEventListener( 'load', function ( event ) {
+
+                THREE.Cache.add( loadsrc_r0, this );
+
+                if ( onLoad ) onLoad( this );
+
+                scope.manager.itemEnd( loadsrc_r0 );
+
+            }, false );
+
+            image_r1.addEventListener( 'load', function ( event ) {
+
+                THREE.Cache.add( loadsrc_r1, this );
+
+                if ( onLoad ) onLoad( this );
+
+                scope.manager.itemEnd( loadsrc_r1 );
+
+            }, false );
+
+            if ( onProgress !== undefined ) {
+
+                image.addEventListener( 'progress', function ( event ) {
+
+                    onProgress( event );
+
+                }, false );
+
+                image_r1.addEventListener( 'progress', function ( event ) {
+
+                    onProgress( event );
+
+                }, false );
+
+            }
+
+            if ( onError !== undefined ) {
+
+                image.addEventListener( 'error', function ( event ) {
+
+                    onError( event );
+
+                }, false );
+
+                image_r1.addEventListener( 'error', function ( event ) {
+
+                    onError( event );
+
+                }, false );
+
+            }
+
+            if ( this.crossOrigin !== undefined ) image.crossOrigin = this.crossOrigin;
+            if ( this.crossOrigin !== undefined ) image_r1.crossOrigin = this.crossOrigin;
+
+            image.src = loadsrc_r0;
+            image_r1.src = loadsrc_r1;
+
+            scope.manager.itemStart( loadsrc_r0 );
+            scope.manager.itemStart( loadsrc_r1 );
+
+            return image;
+
+        },
+
+        setCrossOrigin: function ( value ) {
+
+            this.crossOrigin = value;
+
+        }
+
+    }
+
+    Potree.PanoSphereGeometry = function(radius,widthSegments,heightSegments,partNum){
+        this.type = 'PanoSphereGeometry';
+
+        this.parameters = {
+            radius: radius,
+            widthSegments: widthSegments,
+            heightSegments: heightSegments,
+            partNum:partNum
+        };
+        radius = radius ? radius : 50;
+        widthSegments = widthSegments ? widthSegments : 25;
+        heightSegments = heightSegments ? heightSegments : 50;
+        partNum = partNum ? partNum : 32;
+
+        this.geometries = [];
+
+        function generateSpherePart(i){ // i : 1~32
+            if(i < 1 || i > 32){
+                console.warn('i is between 1 from 32');
+                return;
+            }
+            var phiStart = Math.floor((i-1)/4)*Math.PI/4;
+            var phiLength = Math.PI/4;
+            var thetaStart = ((i-1)%4)*Math.PI/4;
+            var thetaLength = Math.PI/4;
+            var sphereGeometry = new THREE.SphereGeometry(radius,widthSegments,heightSegments,phiStart,phiLength,thetaStart,thetaLength);
+            sphereGeometry.applyMatrix(new THREE.Matrix4().makeScale(-1, 1, 1));  //make sure texture is rendered inside the sphere
+            sphereGeometry.partID = i;
+            return sphereGeometry;
+        }
+
+        for(var i = 1;i <= partNum;i++){
+            var sphereGeometry = generateSpherePart(i);
+            this.geometries.push(sphereGeometry);
+        }
+
+    };
+
+    Potree.PanoSphereGeometry = function(radius,widthSegments,heightSegments,partNum){
+        //THREE.Object3D.call(this);
+        //this.type = 'PanoSphereGeometry';
+
+        this.parameters = {
+            radius: radius,
+            widthSegments: widthSegments,
+            heightSegments: heightSegments,
+            partNum:partNum
+        };
+        radius = radius ? radius : 50;
+        widthSegments = widthSegments ? widthSegments : 25;
+        heightSegments = heightSegments ? heightSegments : 50;
+        partNum = partNum ? partNum : 32;
+
+        this.geometries = [];
+
+        function generateSpherePart(i){ // i : 1~32
+            if(i < 1 || i > 32){
+                console.warn('i is between 1 from 32');
+                return;
+            }
+            var phiStart = Math.floor((i-1)/4)*Math.PI/4;
+            var phiLength = Math.PI/4;
+            var thetaStart = ((i-1)%4)*Math.PI/4;
+            var thetaLength = Math.PI/4;
+            var sphereGeometry = new THREE.SphereGeometry(radius,widthSegments,heightSegments,phiStart,phiLength,thetaStart,thetaLength);
+            sphereGeometry.applyMatrix(new THREE.Matrix4().makeScale(-1, 1, 1));
+            sphereGeometry.partID = i;
+            return sphereGeometry;
+        }
+
+        for(var i = 1;i <= partNum;i++){
+            var sphereGeometry = generateSpherePart(i);
+            this.geometries.push(sphereGeometry);
+        }
+
+    };
+    //Potree.PanoSphereGeometry.prototype = Object.create(THREE.Object3D.prototype);
+
+    Potree.PanoSphereMaterial = function(rootURL,imageNum){
+        //THREE.Object3D.call(this);
+        //this.type = 'PanoSphereMaterial';
+        this.parameters = {
+            rootURL:rootURL,
+            imageNum:imageNum
+        };
+        rootURL = rootURL === undefined ? '' : rootURL;
+        imageNum = imageNum ? imageNum : 32;
+        this.urls = [];
+        this.Textures = [];
+
+        function loadSpherePartTexture(i){
+            var id;
+            if(i < 10)
+            id = '0' + i;
+            else
+            id = i;
+            var texture = new THREE.Texture();
+            var loader = new Potree.PanoSphereImageLoader();
+            loader.load(rootURL + id,function(image){
+                texture.image = image;
+                texture.needsUpdate = true;
+            },false);
+            return texture;
+        }
+
+        for(var i = 1;i <= imageNum;i++){
+            var texture = loadSpherePartTexture(i);
+            this.Textures.push(texture);
+        }
+    };
+    //Potree.PanoSphereMaterial.prototype = Object.create(THREE.Object3D.prototype);
+
+    Potree.PanoSphere = function(geometry,material){
+        THREE.Object3D.call(this);
+        this.geometries = geometry.geometries;
+        this.Textures = material.Textures;
+        this.spherePartMeshs = [];
+        if(geometry.geometries.length == material.Textures.length && geometry.geometries.length > 0 && material.Textures.length > 0)
+            this.partNum = geometry.geometries.length;
+        else{
+            console.warn('PanoSphere\'s part Number isn\'t right!');
+        }
+
+        for(var i = 0;i < this.partNum;i++){
+            var spherePart = this.geometries[i];
+            var spherePartMaterial = new THREE.MeshBasicMaterial();
+            spherePartMaterial.map = this.Textures[i];
+            var spherePartMesh = new THREE.Mesh(spherePart,spherePartMaterial);
+            spherePartMesh.partID = i + 1;
+            this.spherePartMeshs.push(spherePartMesh);
+            this.add(spherePartMesh);
+        }
+    };
+
+    Potree.PanoSphere.prototype = Object.create(THREE.Object3D.prototype);
+</script>
+
+<script>
     // panoramas background
-    var panoramaPath = "PanoramaData/testpano.jpg";
+    var panoramaPath = "PanoramaData/ladybug_panoramic_001915_";
 
     // setting up the renderer
     renderer = new THREE.WebGLRenderer();
@@ -29,7 +279,7 @@
 
     // adding a camera
     var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
-    camera.position.set( 0, 0, 0.1 );
+    camera.position.set( 0, 0, 100 );
     camera.target = new THREE.Vector3(0, 0, 0);
 
     //control
@@ -39,22 +289,19 @@
     //controls.maxDistance = 80;
 
     // creation of a big sphere geometry
-    var sphere = new THREE.SphereGeometry(40, 200, 200);  //widthSegments >= 8 , heightSegments >= 4
-    sphere.applyMatrix(new THREE.Matrix4().makeScale(-1, 1, 1));
+    var sphere = new THREE.Object3D();
+    var radius = 40,widthSegments = 25,heightSegments = 50;  //widthSegments >= 8 , heightSegments >= 4
 
-    // creation of the sphere material
-    var sphereMaterial = new THREE.MeshBasicMaterial();
-    sphereMaterial.map = THREE.ImageUtils.loadTexture(panoramaPath);
+    //pano sphere
+    var geometry = new Potree.PanoSphereGeometry(radius,widthSegments,heightSegments,32);
+    var material = new Potree.PanoSphereMaterial(panoramaPath,32);
+    var panosphere = new Potree.PanoSphere(geometry,material);
+    scene.add( panosphere );
 
-    // geometry + material = mesh (actual object)
-    var sphereMesh = new THREE.Mesh(sphere, sphereMaterial);
-    scene.add(sphereMesh);
-    
     var axisHelper = new THREE.AxisHelper( 50 );
-		scene.add( axisHelper );
-		
-		window.addEventListener( 'resize', onWindowResize, false );
-		document.addEventListener( 'mousedown', MouseDown, false );
+    scene.add( axisHelper );
+
+    window.addEventListener( 'resize', onWindowResize, false );
 
     render();
 
@@ -67,69 +314,15 @@
         // calling again render function
         renderer.render(scene, camera);
 
-        var a = sphereMaterial.map.toJSON;
     }
-    
+
     function onWindowResize() {
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setSize( window.innerWidth, window.innerHeight );
 
-			}
-    
-    function MouseDown(event){
-    	
-    		event.preventDefault();
-    		var mouse =  {
-							x: event.clientX,
-							y: - event.clientY
-						};
-				var vector = new THREE.Vector3(mouse.x,mouse.y,0);
-				vector.unproject(camera);
-				var ray = new THREE.Ray(camera.position,vector.sub(camera.position).normalize());
-				var p = pickBallVertex(ray);
-				var uv = p.uv;
-				console.log('pointer: (' + uv.x + ',' + uv.y + ')');
     }
-    
-    pickBallVertex = function(ray){
-    	
-			  var _ray = ray !== undefined ?ray : new THREE.Ray();
-			  sphereMesh.updateMatrixWorld();
-			  var object = sphere;
-			  var vertices = object.vertices;
-			  var faces = object.faces;
-			  var	closestPoint = {
-				position: vertices[0].clone().applyMatrix4(sphereMesh.matrixWorld),
-				uv:new THREE.Vector2()
-			  };
-			  var min_distance = _ray.distanceToPoint(vertices[0].clone().applyMatrix4(sphereMesh.matrixWorld));
-			  for(var i in vertices){
-				var v = vertices[i].clone().applyMatrix4(sphereMesh.matrixWorld);
-			      var distance = _ray.distanceToPoint(v);
-			      if(distance < min_distance){
-			          min_distance = distance;
-			          closestPoint.position = v;
-			      }
-			  }
-				var faceId;
-				for(var i in faces){
-					var a = vertices[faces[i].a].clone().applyMatrix4(sphereMesh.matrixWorld),
-						b = vertices[faces[i].b].clone().applyMatrix4(sphereMesh.matrixWorld),
-						c = vertices[faces[i].c].clone().applyMatrix4(sphereMesh.matrixWorld);
-					if(_ray.intersectTriangle(a,b,c))
-						faceId = i;
-				}
-				if(faceId !== undefined){
-					var uvs = object.faceVertexUvs[0][faceId];
-					closestPoint.uv = new THREE.Vector2((uvs[0].x+uvs[1].x+uvs[2].x)/3,(uvs[0].y+uvs[1].y+uvs[2].y)/3);
-				
-				}
-				closestPoint.position.copy(scene.worldToLocal(closestPoint.position));
-			  return closestPoint;
-			  
-		};
 
 </script>
 </body>
