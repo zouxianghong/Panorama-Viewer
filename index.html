@@ -29,6 +29,7 @@
     Potree.PanoSphereImageLoader.prototype = {
 
         constructor: Potree.PanoSphereImageLoader,
+        loaded:0,
 
         load: function ( url, onLoad, onProgress, onError ) {
 
@@ -54,17 +55,13 @@
 
             var image = document.createElement( 'img' );
             var image_r1 = document.createElement( 'img' );
+            image.rx = 0;
+            image_r1.rx = 1;
 
             image.addEventListener( 'load', function ( event ) {
-                var _cached = THREE.Cache.get( loadsrc_r1 );
                 THREE.Cache.add( loadsrc_r0, this );
-
-                if ( onLoad ) {
-                    if(_cached)
-                        onLoad( _cached );
-                    else
-                        onLoad( this );
-                }
+                scope.loaded ++;
+                if ( onLoad ) onLoad( this );
 
                 scope.manager.itemEnd( loadsrc_r0 );
 
@@ -73,7 +70,7 @@
             image_r1.addEventListener( 'load', function ( event ) {
 
                 THREE.Cache.add( loadsrc_r1, this );
-
+                scope.loaded ++;
                 if ( onLoad ) onLoad( this );
 
                 scope.manager.itemEnd( loadsrc_r1 );
@@ -232,6 +229,10 @@
             var texture = new THREE.Texture();
             var loader = new Potree.PanoSphereImageLoader();
             loader.load(rootURL + id,function(image){
+                var loaded = this.loaded;
+                var rx = image.rx;
+                if(loaded == 2 && rx == 0)
+                    return;
                 texture.image = image;
                 texture.needsUpdate = true;
             },false);
