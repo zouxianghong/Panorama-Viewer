@@ -1,0 +1,104 @@
+<html>
+<head>
+    <style>
+        body{
+            margin: 0;
+        }
+        canvas{
+            width: 100%;
+            height: 100%
+        }
+    </style>
+    <script src="js\three.js"></script>
+    <script src="js\OrbitControls.js"></script>
+    <script src="js\dat.gui.min.js"></script>
+
+</head>
+<body>
+<script>
+    // panoramas background
+    var panoramaPath = "PanoramaData/r1/ladybug_panoramic_001915_";
+
+    // setting up the renderer
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // creating a new scene
+    var scene = new THREE.Scene();
+
+    // adding a camera
+    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+    camera.position.set( 0, 0, 100 );
+    camera.target = new THREE.Vector3(0, 0, 0);
+
+    //control
+    controls = new THREE.OrbitControls( camera );
+    controls.enablePan = false;
+    controls.minDistance = 10;
+    //controls.maxDistance = 80;
+
+    // creation of a big sphere geometry
+    var sphere = new THREE.Object3D();
+    var radius = 40,widthSegments = 25,heightSegments = 50;  //widthSegments >= 8 , heightSegments >= 4
+
+    function generateSpherePart(panoPath,i){ // i : 1~32
+        if(i < 1 || i > 32){
+            console.warn('i is between 1 from 32');
+            return;
+        }
+        var phiStart = Math.floor((i-1)/4)*Math.PI/4;
+        var phiLength = Math.PI/4;
+        var thetaStart = ((i-1)%4)*Math.PI/4;
+        var thetaLength = Math.PI/4;
+        var sphere = new THREE.SphereGeometry(radius,widthSegments,heightSegments,phiStart,phiLength,thetaStart,thetaLength);
+        sphere.applyMatrix(new THREE.Matrix4().makeScale(-1, 1, 1));
+        var sphereMaterial = new THREE.MeshBasicMaterial();
+        var texture = new THREE.Texture();
+        var loader = new THREE.ImageLoader();
+        loader.load(panoPath + i + '.jpg',function(image){
+            texture.image = image;
+            texture.needsUpdate = true;
+        },false);
+        sphereMaterial.map = texture;
+        var sphereMesh = new THREE.Mesh(sphere, sphereMaterial);
+        return sphereMesh;
+    }
+
+    for(var i = 1;i <= 32;i++){
+        var spherePart = generateSpherePart(panoramaPath,i);
+        if(spherePart){
+            sphere.add(spherePart);
+        }
+    }
+    scene.add(sphere);
+
+    var axisHelper = new THREE.AxisHelper( 50 );
+    scene.add( axisHelper );
+
+    window.addEventListener( 'resize', onWindowResize, false );
+
+    render();
+
+    function render(){
+
+        requestAnimationFrame(render);
+        // moving the camera according to current latitude (vertical movement) and longitude (horizontal movement)
+        camera.lookAt(camera.target);
+        controls.update();
+        // calling again render function
+        renderer.render(scene, camera);
+
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+    }
+
+</script>
+</body>
+</html>
