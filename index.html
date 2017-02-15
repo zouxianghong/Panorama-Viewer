@@ -56,10 +56,15 @@
             var image_r1 = document.createElement( 'img' );
 
             image.addEventListener( 'load', function ( event ) {
-
+                var _cached = THREE.Cache.get( loadsrc_r1 );
                 THREE.Cache.add( loadsrc_r0, this );
 
-                if ( onLoad ) onLoad( this );
+                if ( onLoad ) {
+                    if(_cached)
+                        onLoad( _cached );
+                    else
+                        onLoad( this );
+                }
 
                 scope.manager.itemEnd( loadsrc_r0 );
 
