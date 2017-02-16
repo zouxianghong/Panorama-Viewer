@@ -35,15 +35,8 @@
             var loadsrc_r0 = url + '_r0.jpg';
             var loadsrc_r1 = url + '_r1.jpg';
 
-            var cached = THREE.Cache.get( loadsrc_r0 );
-            var cached_r1 = THREE.Cache.get( loadsrc_r1 );
+            var cached = THREE.Cache.get( url );
 
-            if ( cached_r1 !== undefined ) {
-
-                onLoad( cached_r1 );
-                return;
-
-            }
             if ( cached !== undefined ) {
 
                 onLoad( cached );
@@ -52,38 +45,28 @@
             }
 
             var image = document.createElement( 'img' );
-            var image_r1 = document.createElement( 'img' );
-            image.rx = 0;
-            image_r1.rx = 1;
+            image.loadsrc_r0 = loadsrc_r0;
+            image.loadsrc_r1 = loadsrc_r1;
+            image.loaded = 'Nothing_Loaded'; // 'Nothing_Loaded' / 'R0_Loaded' / 'R1_Loaded'
 
             image.addEventListener( 'load', function ( event ) {
-                THREE.Cache.add( loadsrc_r0, this );
+                THREE.Cache.add( url, this );
                 scope.loaded ++;
+                var reg = /r1/;
+                var rx = reg.test(this.src);
+                if(rx)
+                    this.loaded = 'R1_Loaded';
+                else
+                    this.loaded = 'R0_Loaded';
                 if ( onLoad ) onLoad( this );
 
-                scope.manager.itemEnd( loadsrc_r0 );
-
-            }, false );
-
-            image_r1.addEventListener( 'load', function ( event ) {
-
-                THREE.Cache.add( loadsrc_r1, this );
-                scope.loaded ++;
-                if ( onLoad ) onLoad( this );
-
-                scope.manager.itemEnd( loadsrc_r1 );
+                scope.manager.itemEnd( url );
 
             }, false );
 
             if ( onProgress !== undefined ) {
 
                 image.addEventListener( 'progress', function ( event ) {
-
-                    onProgress( event );
-
-                }, false );
-
-                image_r1.addEventListener( 'progress', function ( event ) {
 
                     onProgress( event );
 
@@ -99,22 +82,11 @@
 
                 }, false );
 
-                image_r1.addEventListener( 'error', function ( event ) {
-
-                    onError( event );
-
-                }, false );
-
             }
 
             if ( this.crossOrigin !== undefined ) image.crossOrigin = this.crossOrigin;
-            if ( this.crossOrigin !== undefined ) image_r1.crossOrigin = this.crossOrigin;
 
-            image.src = loadsrc_r0;
-            image_r1.src = loadsrc_r1;
-
-            scope.manager.itemStart( loadsrc_r0 );
-            scope.manager.itemStart( loadsrc_r1 );
+            scope.manager.itemStart( url );
 
             return image;
 
@@ -226,14 +198,15 @@
             id = i;
             var texture = new THREE.Texture();
             var loader = new Potree.PanoSphereImageLoader();
-            loader.load(rootURL + id,function(image){
-                var loaded = loader.loaded;
-                var rx = image.rx;
-                if(loaded == 2 && rx == 0)
-                    return;
+            texture.image = loader.load(rootURL + id,function(image){
+                //var loaded = loader.loaded;
+                //var rx = image.rx;
+                //if(loaded == 2 && rx == 0)
+                    //return;
                 texture.image = image;
                 texture.needsUpdate = true;
             },false);
+
             return texture;
         }
 
@@ -249,6 +222,7 @@
         this.geometries = geometry.geometries;
         this.Textures = material.Textures;
         this.spherePartMeshs = [];
+        this.spherePartMeshsInFrustum = [];
         if(geometry.geometries.length == material.Textures.length && geometry.geometries.length > 0 && material.Textures.length > 0)
             this.partNum = geometry.geometries.length;
         else{
@@ -267,6 +241,27 @@
     };
 
     Potree.PanoSphere.prototype = Object.create(THREE.Object3D.prototype);
+
+    Potree.PanoSphere.prototype.update = function(camera){
+        var frustum = new THREE.Frustum();
+        frustum.setFromMatrix( new THREE.Matrix4().multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse ) );
+        //this.spherePartMeshsInFrustum = [];
+        for(var i in this.spherePartMeshs){
+            var object = this.spherePartMeshs[i];
+            if(frustum.intersectsObject(object)){
+                //this.spherePartMeshsInFrustum.push(object);
+                var image = object.material.map.image;
+                if(image.loaded == 'Nothing_Loaded')
+                    image.src = image.loadsrc_r0;
+                else if(image.loaded == 'R0_Loaded'){
+                    image.src = image.loadsrc_r1;
+                }
+
+            }
+        }
+
+    };
+
 </script>
 
 <script>
@@ -315,6 +310,7 @@
         // moving the camera according to current latitude (vertical movement) and longitude (horizontal movement)
         camera.lookAt(camera.target);
         controls.update();
+        panosphere.update(camera);
         // calling again render function
         renderer.render(scene, camera);
 
