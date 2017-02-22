@@ -135,48 +135,7 @@
             var sphereGeometry = generateSpherePart(i);
             this.geometries.push(sphereGeometry);
         }
-
     };
-
-    Potree.PanoSphereGeometry = function(radius,widthSegments,heightSegments,partNum){
-        //THREE.Object3D.call(this);
-        //this.type = 'PanoSphereGeometry';
-
-        this.parameters = {
-            radius: radius,
-            widthSegments: widthSegments,
-            heightSegments: heightSegments,
-            partNum:partNum
-        };
-        radius = radius ? radius : 50;
-        widthSegments = widthSegments ? widthSegments : 25;
-        heightSegments = heightSegments ? heightSegments : 50;
-        partNum = partNum ? partNum : 32;
-
-        this.geometries = [];
-
-        function generateSpherePart(i){ // i : 1~32
-            if(i < 1 || i > 32){
-                console.warn('i is between 1 from 32');
-                return;
-            }
-            var phiStart = Math.floor((i-1)/4)*Math.PI/4;
-            var phiLength = Math.PI/4;
-            var thetaStart = ((i-1)%4)*Math.PI/4;
-            var thetaLength = Math.PI/4;
-            var sphereGeometry = new THREE.SphereGeometry(radius,widthSegments,heightSegments,phiStart,phiLength,thetaStart,thetaLength);
-            sphereGeometry.applyMatrix(new THREE.Matrix4().makeScale(-1, 1, 1));
-            sphereGeometry.partID = i;
-            return sphereGeometry;
-        }
-
-        for(var i = 1;i <= partNum;i++){
-            var sphereGeometry = generateSpherePart(i);
-            this.geometries.push(sphereGeometry);
-        }
-
-    };
-    //Potree.PanoSphereGeometry.prototype = Object.create(THREE.Object3D.prototype);
 
     Potree.PanoSphereMaterial = function(rootURL,imageNum){
         //THREE.Object3D.call(this);
@@ -193,9 +152,9 @@
         function loadSpherePartTexture(i){
             var id;
             if(i < 10)
-            id = '0' + i;
+            id = '_0' + i;
             else
-            id = i;
+            id = '_' + i;
             var texture = new THREE.Texture();
             var loader = new Potree.PanoSphereImageLoader();
             texture.image = loader.load(rootURL + id,function(image){
@@ -266,7 +225,7 @@
 
 <script>
     // panoramas background
-    var panoramaPath = "PanoramaData/ladybug_panoramic_001915_";
+    var panoramaPath = "PanoramaData/ladybug_panoramic_001436";
 
     // setting up the renderer
     renderer = new THREE.WebGLRenderer();
@@ -295,7 +254,9 @@
     var geometry = new Potree.PanoSphereGeometry(radius,widthSegments,heightSegments,32);
     var material = new Potree.PanoSphereMaterial(panoramaPath,32);
     var panosphere = new Potree.PanoSphere(geometry,material);
-    scene.add( panosphere );
+    var obj = new THREE.Object3D();
+    obj = panosphere;
+    scene.add( obj );
 
     var axisHelper = new THREE.AxisHelper( 50 );
     scene.add( axisHelper );
